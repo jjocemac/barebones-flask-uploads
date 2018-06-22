@@ -13,8 +13,8 @@ from models import Result
 def index():
     return render_template("home.html")
 
-@app.route('/input', methods=['GET', 'POST'])
-def input():
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
     errors = []
     results = {}
     if request.method == "POST":
@@ -24,23 +24,23 @@ def input():
             print(text)
         except:
             flash("text submission unsuccessful","danger")
-            return redirect(url_for('input'))
+            return redirect(url_for('upload'))
         # save the result to the DB:
         try:
             result = Result(text=text)
             db.session.add(result)
             db.session.commit()
             flash("Text successfully submitted to DB","success")
-            return redirect(url_for('input'))
+            return redirect(url_for('upload'))
         except:
             flash("Unable to add item to database","danger")
-            return redirect(url_for('input'))
-    return render_template('input.html', errors=errors)
+            return redirect(url_for('upload'))
+    return render_template('upload.html', errors=errors)
 
-@app.route('/table')
-def table():
+@app.route('/download')
+def download():
     results = Result.query.all()
-    return render_template("table.html", results=results)
+    return render_template("download.html", results=results)
 
 if __name__ == '__main__':
     app.run()

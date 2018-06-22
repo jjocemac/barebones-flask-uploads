@@ -2,9 +2,11 @@
 
 {% block body %}
   <div class="jumbotron text-center">
-    <h1>Welcome to this barebones flask app with postgreSQL database</h1>
+    <h1>Welcome to this barebones flask uploads app</h1>
     <p class="lead">
-      This simple app allows someone to submit a string to the database, and shows the table of previously submitted strings
+      This simple app allows someone to upload a file to S3.
+      This will also add an entry to a database.
+      A table shows previously uploaded files and allows the user to re-download each file.
     <p>
   </div>
 {% endblock %}
