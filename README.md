@@ -40,6 +40,8 @@ $ createdb <database_name>
 $ echo "pipenv shell" > .env
 $ echo 'export APP_SETTINGS="config.DevelopmentConfig"' >> .env
 $ echo 'export DATABASE_URL="postgresql://localhost/<database_name>"' >> .env
+$ echo 'export AWS_ACCESS_KEY_ID=<xxx>' >> .env
+$ echo 'export AWS_SECRET_ACCESS_KEY=<yyy>' >> .env
 $ cd ../<new-app-name>
 ```
 - Migrate database:
@@ -54,7 +56,9 @@ $ python manage.py runserver
 ```sh
 $ heroku create <unique-app-name>
 $ heroku config:set APP_SETTINGS=config.ProductionConfig
+$ heroku config:set AWS_ACCESS_KEY_ID=<xxx> AWS_SECRET_ACCESS_KEY=<yyy>
 $ heroku addons:create heroku-postgresql:hobby-dev
 $ git push heroku master
 $ heroku run python manage.py db upgrade
 ```
+- Create an AWS S3 [bucket](https://devcenter.heroku.com/articles/s3)
