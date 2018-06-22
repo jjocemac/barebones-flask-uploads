@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<div class="col-sm-5 col-sm-offset-1">
+    <h2>Previously entered text strings</h2>
+    <br>
+    <div id="results">
+      <table class="table table-striped" style="max-width: 300px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>text string</th>
+          </tr>
+        </thead>
+        {% for result in results%}
+          <tr>
+            <td>{{ result.id }}</td>
+            <td>{{ result.text }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+</div>
+
+{% endblock %}
