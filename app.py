@@ -2,6 +2,9 @@ import os
 from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+import json
+import boto3
+from random import randint
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
@@ -70,6 +73,31 @@ def download_file(id):
         return send_from_directory(UPLOAD_FOLDER,id+'_'+filename,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
+
+@app.route('/sign_s3/')
+def sign_s3():
+  S3_BUCKET = os.environ.get('S3_BUCKET')
+
+  file_name = str(randint(100,999)) + request.args.get('file_name')
+  file_type = request.args.get('file_type')
+
+  s3 = boto3.client('s3','eu-west-2')
+
+  presigned_post = s3.generate_presigned_post(
+    Bucket = S3_BUCKET,
+    Key = file_name,
+    Fields = {"acl": "private", "Content-Type": file_type},
+    Conditions = [
+      {"acl": "private"},
+      {"Content-Type": file_type}
+    ],
+    ExpiresIn = 3600
+  )
+
+  return json.dumps({
+    'data': presigned_post,
+    'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (S3_BUCKET, file_name)
+  })
 
 if __name__ == '__main__':
     app.run()
