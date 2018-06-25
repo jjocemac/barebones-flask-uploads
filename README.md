@@ -7,7 +7,7 @@ $ python manage.py runserver
 ```
 
 ## To use the barebones-flask-uploads app as a starting point:
-- Create an AWS S3 [bucket](https://devcenter.heroku.com/articles/s3)
+- Create an AWS S3 [bucket](https://devcenter.heroku.com/articles/s3). Choose London as the region.
 - Create new repo on GitHub. In Quick Setup, copy URL (do not initialize the new reop with README, license, or gitignore file)
 - In a local shell:
 ```sh
