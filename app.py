@@ -1,11 +1,16 @@
 import os
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+UPLOAD_FOLDER = 'Uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+if not os.path.isdir(UPLOAD_FOLDER):
+    os.mkdir(UPLOAD_FOLDER)
 
 from models import Result
 
@@ -15,27 +20,37 @@ def index():
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
-    errors = []
-    results = {}
     if request.method == "POST":
-        # get text that the user has entered
+        #Get file name
         try:
-            text = request.form['text']
-            print(text)
+            newfile = request.files['file']
         except:
-            flash("text submission unsuccessful","danger")
+            flash("file submission unsuccessful","danger")
             return redirect(url_for('upload'))
-        # save the result to the DB:
+        #No selected file
+        if newfile.filename == '':
+            flash('No file selected','danger')
+            return redirect(url_for('upload'))
+        #Get fields from web-form
+        filename = secure_filename(newfile.filename)
+        #Save the result to the DB
         try:
-            result = Result(text=text)
+            result = Result(filename=filename)
             db.session.add(result)
             db.session.commit()
-            flash("Text successfully submitted to DB","success")
+            id = result.id
+        except:
+            flash("Unable to add file to database","danger")
+            return redirect(url_for('upload'))
+        #Save the file
+        try:
+            newfile.save(os.path.join(UPLOAD_FOLDER,str(id)+'_'+filename))
+            flash("File successfully uploaded","success")
             return redirect(url_for('upload'))
         except:
-            flash("Unable to add item to database","danger")
+            flash("Added file to database but unable to save file","danger")
             return redirect(url_for('upload'))
-    return render_template('upload.html', errors=errors)
+    return render_template('upload.html')
 
 @app.route('/download')
 def download():

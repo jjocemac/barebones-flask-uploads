@@ -10,13 +10,13 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>text string</th>
+            <th>filename</th>
           </tr>
         </thead>
         {% for result in results%}
           <tr>
             <td>{{ result.id }}</td>
-            <td>{{ result.text }}</td>
+            <td>{{ result.filename }}</td>
           </tr>
         {% endfor %}
       </table>

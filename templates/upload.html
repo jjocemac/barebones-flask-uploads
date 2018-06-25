@@ -1,9 +1,9 @@
 {% extends 'layout.html' %}
 
 {% block body %}
-<form role="form" method='POST' action='/upload'>
+<form role="form" method='POST' action='/upload' enctype="multipart/form-data">
   <div class="form-group">
-    <input type="text" name="text" class="form-control" id="text-box" placeholder="Enter text string..." style="max-width: 300px;" autofocus required>
+    <input type="file" name="file" class="form-control-file" style="max-width: 300px;" autofocus required>
   </div>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>

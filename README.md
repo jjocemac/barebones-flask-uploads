@@ -44,7 +44,12 @@ $ echo 'export AWS_ACCESS_KEY_ID=<xxx>' >> .env
 $ echo 'export AWS_SECRET_ACCESS_KEY=<yyy>' >> .env
 $ cd ../<new-app-name>
 ```
-- Migrate database:
+- Replace "postgresql://localhost/<database_name>" above with "postgresql:///<database_name>" if on personal laptop
+- If changes are made to the database schema (through models.py), create a new database migration:
+```sh
+$ python manage.py db migrate
+```
+- (In all cases) Apply the upgrades to the database:
 ```sh
 $ python manage.py db upgrade
 ```
