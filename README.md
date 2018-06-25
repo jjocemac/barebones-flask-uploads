@@ -7,6 +7,7 @@ $ python manage.py runserver
 ```
 
 ## To use the barebones-flask-uploads app as a starting point:
+- Create an AWS S3 [bucket](https://devcenter.heroku.com/articles/s3). Choose London as the region.
 - Create new repo on GitHub. In Quick Setup, copy URL (do not initialize the new reop with README, license, or gitignore file)
 - In a local shell:
 ```sh
@@ -42,6 +43,7 @@ $ echo 'export APP_SETTINGS="config.DevelopmentConfig"' >> .env
 $ echo 'export DATABASE_URL="postgresql://localhost/<database_name>"' >> .env
 $ echo 'export AWS_ACCESS_KEY_ID=<xxx>' >> .env
 $ echo 'export AWS_SECRET_ACCESS_KEY=<yyy>' >> .env
+$ echo 'export S3_BUCKET=<s3_bucket_name>' >> .env
 $ cd ../<new-app-name>
 ```
 - Replace "postgresql://localhost/<database_name>" above with "postgresql:///<database_name>" if on personal laptop
@@ -62,8 +64,21 @@ $ python manage.py runserver
 $ heroku create <unique-app-name>
 $ heroku config:set APP_SETTINGS=config.ProductionConfig
 $ heroku config:set AWS_ACCESS_KEY_ID=<xxx> AWS_SECRET_ACCESS_KEY=<yyy>
+$ heroku config:set S3_BUCKET=<s3_bucket_name>
 $ heroku addons:create heroku-postgresql:hobby-dev
 $ git push heroku master
 $ heroku run python manage.py db upgrade
 ```
-- Create an AWS S3 [bucket](https://devcenter.heroku.com/articles/s3)
+- Visit [AWS buckets](https://s3.console.aws.amazon.com/s3/buckets) page, select the bucket, select Permissions, CORS configuration, and paste in the following before clicking Save
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <CORSRule>
+        <AllowedOrigin>*</AllowedOrigin>
+        <AllowedMethod>GET</AllowedMethod>
+        <AllowedMethod>POST</AllowedMethod>
+        <AllowedMethod>PUT</AllowedMethod>
+        <AllowedHeader>*</AllowedHeader>
+    </CORSRule>
+</CORSConfiguration>
+```
