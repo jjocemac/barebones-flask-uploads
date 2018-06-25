@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 
@@ -56,6 +56,20 @@ def upload():
 def download():
     results = Result.query.all()
     return render_template("download.html", results=results)
+
+@app.route('/download-file/<string:id>', methods=['POST'])
+def download_file(id):
+    try:
+        filename = db.session.query(Result.filename).filter(Result.id == id).one()[0]
+    except:
+        abort(404)
+    if filename is None:
+        abort(404)
+    filepath = os.path.join(UPLOAD_FOLDER,id+'_'+filename)
+    if os.path.exists(filepath):
+        return send_from_directory(UPLOAD_FOLDER,id+'_'+filename,as_attachment=True,attachment_filename=filename)
+    else:
+        abort(404)
 
 if __name__ == '__main__':
     app.run()

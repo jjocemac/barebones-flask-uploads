@@ -16,7 +16,11 @@
         {% for result in results%}
           <tr>
             <td>{{ result.id }}</td>
-            <td>{{ result.filename }}</td>
+            <td>
+              <form action=/download-file/{{result.id}} method="post">
+                <a href="#" onclick="this.parentNode.submit()">{{result.filename}}</a>
+              </form>
+            </td>
           </tr>
         {% endfor %}
       </table>
