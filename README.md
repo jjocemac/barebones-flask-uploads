@@ -69,4 +69,16 @@ $ heroku addons:create heroku-postgresql:hobby-dev
 $ git push heroku master
 $ heroku run python manage.py db upgrade
 ```
-- Visit [AWS buckets](https://s3.console.aws.amazon.com/s3/buckets) page, select the bucket, select Permissions, CORS configuration, and change the AllowedOrigin tag to the domain of the new heroku app. Click Save.
+- Visit [AWS buckets](https://s3.console.aws.amazon.com/s3/buckets) page, select the bucket, select Permissions, CORS configuration, and paste in the following before clicking Save
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <CORSRule>
+        <AllowedOrigin>*</AllowedOrigin>
+        <AllowedMethod>GET</AllowedMethod>
+        <AllowedMethod>POST</AllowedMethod>
+        <AllowedMethod>PUT</AllowedMethod>
+        <AllowedHeader>*</AllowedHeader>
+    </CORSRule>
+</CORSConfiguration>
+```
