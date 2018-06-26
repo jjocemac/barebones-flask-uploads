@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, request, flash, abort
+from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import boto3
@@ -35,6 +35,16 @@ def upload_file_to_s3(file, filename):
     )
     return
 
+def download_file_from_s3(filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.resource('s3','eu-west-2')
+    s3.meta.client.download_file(
+        bucket_name,
+        filename,
+        '/tmp/'+filename
+    )
+    return
+
 @app.route('/')
 def index():
     return render_template("home.html")
@@ -60,7 +70,7 @@ def submit_upload_form():
     try:
         upload_file_to_s3(file, filename_in_s3)
     except:
-        flash("Unable to upload file to s3 bucket","danger")
+        flash("Unable to upload file","danger")
         return redirect(url_for('upload'))
     #Return with success:
     flash("File successfully uploaded","success")
@@ -73,6 +83,7 @@ def download():
 
 @app.route('/download-file/<string:id>', methods=['POST'])
 def download_file(id):
+    # Retrieve filename from DB:
     try:
         filename = db.session.query(Result.filename).filter(Result.id == id).one()[0]
     except:
@@ -80,6 +91,18 @@ def download_file(id):
     if filename is None:
         abort(404)
     filename_in_s3 = str(id)+'_'+filename
+    #Try to download the file to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename_in_s3):
+        try:
+            download_file_from_s3(filename_in_s3)
+        except:
+            flash("Unable to download file","danger")
+            return redirect(url_for('download'))
+    #Serve the file to the client:
+    if os.path.exists('/tmp/'+filename_in_s3):
+        return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
+    else:
+        abort(404)
     return redirect(url_for('download'))
 
 if __name__ == '__main__':
