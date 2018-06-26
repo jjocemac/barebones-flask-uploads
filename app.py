@@ -38,6 +38,15 @@ def upload_file_to_s3(file, filename):
 def download_file_from_s3(filename):
     bucket_name = app.config['S3_BUCKET']
     s3 = boto3.resource('s3','eu-west-2')
+    s3.delete_object(
+        bucket_name,
+        filename
+    )
+    return
+
+def delete_file_from_s3(filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.client('s3','eu-west-2')
     s3.meta.client.download_file(
         bucket_name,
         filename,
@@ -91,7 +100,7 @@ def download_file(id):
     if filename is None:
         abort(404)
     filename_in_s3 = str(id)+'_'+filename
-    #Try to download the file to /tmp if it's not already there:
+    #Try to download the file from S3 bucket to /tmp if it's not already there:
     if not os.path.exists('/tmp/'+filename_in_s3):
         try:
             download_file_from_s3(filename_in_s3)
@@ -103,6 +112,28 @@ def download_file(id):
         return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
+    return redirect(url_for('download'))
+
+@app.route('/delete-file/<string:id>', methods=['POST'])
+def delete_file(id):
+    #Delete entry from DB:
+    try:
+        entry = Result.query.filter_by(id=id).one()
+        filename = entry.filename
+        db.session.delete(entry)
+        db.session.commit()
+    except:
+        flash("Unable to delete file entry in database","danger")
+        return redirect(url_for('download'))
+    #Delete file from S3 bucket:
+    filename_in_s3 = str(id)+'_'+filename
+    try:
+        download_file_from_s3(filename_in_s3)
+    except:
+        flash("Unable to delete file","danger")
+        return redirect(url_for('download'))
+
+    flash("File successfully deleted","success")
     return redirect(url_for('download'))
 
 if __name__ == '__main__':

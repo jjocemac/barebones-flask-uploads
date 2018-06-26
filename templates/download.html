@@ -10,7 +10,8 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>filename</th>
+            <th>Filename</th>
+            <th>Delete file?</th>
           </tr>
         </thead>
         {% for result in results%}
@@ -19,6 +20,12 @@
             <td>
               <form action=/download-file/{{result.id}} method="post">
                 <a href="#" onclick="this.parentNode.submit()">{{result.filename}}</a>
+              </form>
+            </td>
+            <td>
+              <form action=/delete-file/{{result.id}} method="post" onsubmit="return confirm('Are you sure?');">
+                <input type="hidden" name="_method" value="DELETE">
+                <input type="submit" value="Delete" class="btn btn-danger pull-right">
               </form>
             </td>
           </tr>
