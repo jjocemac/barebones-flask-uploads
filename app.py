@@ -1,59 +1,70 @@
 import os
-from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
+from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
-import json
 import boto3
-from random import randint
 
 app = Flask(__name__)
+assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
+assert "DATABASE_URL" in os.environ, "DATABASE_URL environment variable not set"
+assert "AWS_ACCESS_KEY_ID" in os.environ, "AWS_ACCESS_KEY_ID environment variable not set"
+assert "AWS_SECRET_ACCESS_KEY" in os.environ, "AWS_SECRET_ACCESS_KEY environment variable not set"
+assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
 app.config.from_object(os.environ['APP_SETTINGS'])
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-UPLOAD_FOLDER = 'Uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-if not os.path.isdir(UPLOAD_FOLDER):
-    os.mkdir(UPLOAD_FOLDER)
 
 from models import Result
+
+def save_file_info_to_db(filename):
+    result = Result(filename=filename)
+    db.session.add(result)
+    db.session.commit()
+    return result.id
+
+def upload_file_to_s3(file, filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.client('s3','eu-west-2')
+    s3.upload_fileobj(
+        file,
+        bucket_name,
+        filename,
+        ExtraArgs={
+            "ACL": "private",
+            "ContentType": file.content_type
+        }
+    )
+    return
 
 @app.route('/')
 def index():
     return render_template("home.html")
 
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route('/upload')
 def upload():
-    if request.method == "POST":
-        #Get file name
-        try:
-            newfile = request.files['file']
-        except:
-            flash("file submission unsuccessful","danger")
-            return redirect(url_for('upload'))
-        #No selected file
-        if newfile.filename == '':
-            flash('No file selected','danger')
-            return redirect(url_for('upload'))
-        #Get fields from web-form
-        filename = secure_filename(newfile.filename)
-        #Save the result to the DB
-        try:
-            result = Result(filename=filename)
-            db.session.add(result)
-            db.session.commit()
-            id = result.id
-        except:
-            flash("Unable to add file to database","danger")
-            return redirect(url_for('upload'))
-        #Save the file
-        try:
-            newfile.save(os.path.join(UPLOAD_FOLDER,str(id)+'_'+filename))
-            flash("File successfully uploaded","success")
-            return redirect(url_for('upload'))
-        except:
-            flash("Added file to database but unable to save file","danger")
-            return redirect(url_for('upload'))
     return render_template('upload.html')
+
+@app.route('/submit-upload-form',methods=['POST'])
+def submit_upload_form():
+    #Get file name:
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    #Save the file info to the DB (get back row id):
+    try:
+        id = save_file_info_to_db(filename)
+    except:
+        flash("Unable to add file to database","danger")
+        return redirect(url_for('upload'))
+    #Upload file to S3 bucket:
+    filename_in_s3 = str(id)+'_'+filename
+    print('test2')
+    try:
+        upload_file_to_s3(file, filename_in_s3)
+    except:
+        flash("Unable to upload file to s3 bucket","danger")
+        return redirect(url_for('upload'))
+    #Return with success:
+    flash("File successfully uploaded","success")
+    return redirect(url_for('upload'))
 
 @app.route('/download')
 def download():
@@ -68,36 +79,8 @@ def download_file(id):
         abort(404)
     if filename is None:
         abort(404)
-    filepath = os.path.join(UPLOAD_FOLDER,id+'_'+filename)
-    if os.path.exists(filepath):
-        return send_from_directory(UPLOAD_FOLDER,id+'_'+filename,as_attachment=True,attachment_filename=filename)
-    else:
-        abort(404)
-
-@app.route('/sign_s3/')
-def sign_s3():
-  S3_BUCKET = os.environ.get('S3_BUCKET')
-
-  file_name = str(randint(100,999)) + request.args.get('file_name')
-  file_type = request.args.get('file_type')
-
-  s3 = boto3.client('s3','eu-west-2')
-
-  presigned_post = s3.generate_presigned_post(
-    Bucket = S3_BUCKET,
-    Key = file_name,
-    Fields = {"acl": "private", "Content-Type": file_type},
-    Conditions = [
-      {"acl": "private"},
-      {"Content-Type": file_type}
-    ],
-    ExpiresIn = 3600
-  )
-
-  return json.dumps({
-    'data': presigned_post,
-    'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (S3_BUCKET, file_name)
-  })
+    filename_in_s3 = str(id)+'_'+filename
+    return redirect(url_for('download'))
 
 if __name__ == '__main__':
     app.run()
