@@ -38,20 +38,17 @@ def upload_file_to_s3(file, filename):
 def download_file_from_s3(filename):
     bucket_name = app.config['S3_BUCKET']
     s3 = boto3.resource('s3','eu-west-2')
-    s3.delete_object(
-        bucket_name,
-        filename
-    )
-    return
-
-def delete_file_from_s3(filename):
-    bucket_name = app.config['S3_BUCKET']
-    s3 = boto3.client('s3','eu-west-2')
     s3.meta.client.download_file(
         bucket_name,
         filename,
         '/tmp/'+filename
     )
+    return
+
+def delete_file_from_s3(filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.resource('s3','eu-west-2')
+    s3.Object(bucket_name,filename).delete()
     return
 
 @app.route('/')
@@ -75,7 +72,6 @@ def submit_upload_form():
         return redirect(url_for('upload'))
     #Upload file to S3 bucket:
     filename_in_s3 = str(id)+'_'+filename
-    print('test2')
     try:
         upload_file_to_s3(file, filename_in_s3)
     except:
@@ -128,11 +124,10 @@ def delete_file(id):
     #Delete file from S3 bucket:
     filename_in_s3 = str(id)+'_'+filename
     try:
-        download_file_from_s3(filename_in_s3)
+        delete_file_from_s3(filename_in_s3)
     except:
         flash("Unable to delete file","danger")
         return redirect(url_for('download'))
-
     flash("File successfully deleted","success")
     return redirect(url_for('download'))
 
