@@ -167,6 +167,51 @@ def direct_download():
     return render_template("direct_download.html", results=results)
 
 
+@app.route('/direct-download-file/<string:id>', methods=['POST'])
+def direct_download_file(id):
+    # Retrieve original and s3 filenames from DB:
+    try:
+        db_entry = Direct.query.filter_by(id=id).first()
+        filename_orig = db_entry.filename_orig
+        filename_s3 = db_entry.filename_s3
+    except:
+        abort(404)
+    if filename_s3 is None:
+        abort(404)
+    #Try to download the file from S3 bucket to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename_s3):
+        try:
+            download_file_from_s3(filename_s3)
+        except:
+            flash("Unable to download file","danger")
+            return redirect(url_for('direct-download'))
+    #Serve the file to the client:
+    if os.path.exists('/tmp/'+filename_s3):
+        return send_from_directory('/tmp',filename_s3,as_attachment=True,attachment_filename=filename_orig)
+    else:
+        abort(404)
+
+
+@app.route('/direct-delete-file/<string:id>', methods=['POST'])
+def direct_delete_file(id):
+    #Delete entry from DB:
+    try:
+        entry = Direct.query.filter_by(id=id).one()
+        filename_s3 = entry.filename_s3
+        db.session.delete(entry)
+        db.session.commit()
+    except:
+        flash("Unable to delete file entry in database","danger")
+        return redirect(url_for('download'))
+    #Delete file from S3 bucket:
+    try:
+        delete_file_from_s3(filename_s3)
+    except:
+        flash("Unable to delete file","danger")
+        return redirect(url_for('direct_download'))
+    flash("File successfully deleted","success")
+    return redirect(url_for('direct_download'))
+
 @app.route('/sign_s3/')
 def sign_s3():
     bucket_name = app.config['S3_BUCKET']
