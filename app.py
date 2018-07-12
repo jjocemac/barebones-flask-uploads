@@ -238,5 +238,25 @@ def sign_s3():
     })
 
 
+@app.route('/sign_s3_download/')
+def sign_s3_download():
+    bucket_name = app.config['S3_BUCKET']
+    id = request.args.get('id')
+    # Retrieve original and s3 filenames from DB:
+    db_entry = Direct.query.filter_by(id=id).first()
+    filename_orig = db_entry.filename_orig
+    filename_s3 = db_entry.filename_s3
+    # Create and return pre-signed url:
+    s3 = boto3.client('s3','eu-west-2')
+    presigned_url = s3.generate_presigned_url(
+      'get_object',
+      Params = {'Bucket': bucket_name, 'Key': filename_s3},
+      ExpiresIn = 3600
+    )
+    return json.dumps({
+      'url': presigned_url,
+    })
+
+
 if __name__ == '__main__':
     app.run()
