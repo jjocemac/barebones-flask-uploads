@@ -3,6 +3,8 @@ from flask import Flask, render_template, redirect, url_for, request, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import boto3
+from random import randint
+import json
 
 app = Flask(__name__)
 assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
@@ -13,13 +15,19 @@ assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
 app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 
-from models import Result
+from models import Result, Direct
 
 def save_file_info_to_db(filename):
     result = Result(filename=filename)
     db.session.add(result)
     db.session.commit()
     return result.id
+
+def save_file_info_to_direct_db(filename_orig,filename_s3):
+    direct = Direct(filename_orig=filename_orig,filename_s3=filename_s3)
+    db.session.add(direct)
+    db.session.commit()
+    return
 
 def upload_file_to_s3(file, filename):
     bucket_name = app.config['S3_BUCKET']
@@ -108,7 +116,6 @@ def download_file(id):
         return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
-    return redirect(url_for('download'))
 
 @app.route('/delete-file/<string:id>', methods=['POST'])
 def delete_file(id):
@@ -130,6 +137,61 @@ def delete_file(id):
         return redirect(url_for('download'))
     flash("File successfully deleted","success")
     return redirect(url_for('download'))
+
+
+@app.route('/direct-upload')
+def direct_upload():
+    return render_template('direct_upload.html')
+
+
+@app.route('/submit-direct-upload-form',methods=['POST'])
+def submit_direct_upload_form():
+    #Get S3 filename:
+    filename_s3 = request.form['filename_s3']
+    #Retrieve original filename
+    filename_orig = filename_s3[6:]
+    #Save the file info to the DB:
+    try:
+        save_file_info_to_direct_db(filename_orig,filename_s3)
+    except:
+        flash("Unable to add file to database","danger")
+        return redirect(url_for('direct_upload'))
+    #Return with success:
+    flash("File successfully uploaded","success")
+    return redirect(url_for('direct_upload'))
+
+
+@app.route('/direct-download')
+def direct_download():
+    results = Direct.query.all()
+    return render_template("direct_download.html", results=results)
+
+
+@app.route('/sign_s3/')
+def sign_s3():
+    bucket_name = app.config['S3_BUCKET']
+    filename_orig = request.args.get('file_name')
+    filename_s3 = str(randint(10000,99999)) + '_' + secure_filename(filename_orig)
+    file_type = request.args.get('file_type')
+
+    s3 = boto3.client('s3','eu-west-2')
+
+    presigned_post = s3.generate_presigned_post(
+      Bucket = bucket_name,
+      Key = filename_s3,
+      Fields = {"acl": "private", "Content-Type": file_type},
+      Conditions = [
+        {"acl": "private"},
+        {"Content-Type": file_type}
+      ],
+      ExpiresIn = 3600
+    )
+
+    return json.dumps({
+      'data': presigned_post,
+      'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (bucket_name, filename_s3)
+    })
+
 
 if __name__ == '__main__':
     app.run()
