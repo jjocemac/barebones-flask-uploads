@@ -15,7 +15,7 @@ assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
 app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 
-from models import Result, Direct
+from models import Result, Direct, Dropbox
 
 def save_file_info_to_db(filename):
     result = Result(filename=filename)
@@ -26,6 +26,12 @@ def save_file_info_to_db(filename):
 def save_file_info_to_direct_db(filename_orig,filename_s3):
     direct = Direct(filename_orig=filename_orig,filename_s3=filename_s3)
     db.session.add(direct)
+    db.session.commit()
+    return
+
+def save_file_info_to_dropbox_db(filename):
+    dropbox = Dropbox(filename=filename)
+    db.session.add(dropbox)
     db.session.commit()
     return
 
@@ -257,6 +263,36 @@ def sign_s3_download():
       'url': presigned_url,
     })
 
+@app.route('/dropbox-upload')
+def dropbox_upload():
+    return render_template('dropbox-upload.html')
+
+@app.route('/submit-dropbox-upload-form',methods=['POST'])
+def submit_dropbox_upload_form():
+    #Get file name:
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    #Save the file info to the DB (get back row id):
+    try:
+        id = save_file_info_to_dropbox_db(filename)
+    except:
+        flash("Unable to add file to database","danger")
+        return redirect(url_for('dropbox_upload'))
+    # #Upload file to S3 bucket:
+    # filename_in_s3 = str(id)+'_'+filename
+    # try:
+    #     upload_file_to_s3(file, filename_in_s3)
+    # except:
+    #     flash("Unable to upload file","danger")
+    #     return redirect(url_for('upload'))
+    #Return with success:
+    flash("File successfully uploaded","success")
+    return redirect(url_for('dropbox_upload'))
+
+@app.route('/dropbox-download')
+def dropbox_download():
+    results = Dropbox.query.all()
+    return render_template("dropbox-download.html", results=results)
 
 if __name__ == '__main__':
     app.run()

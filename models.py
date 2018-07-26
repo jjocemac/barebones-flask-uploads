@@ -25,3 +25,15 @@ class Direct(db.Model):
 
     def __repr__(self):
         return '<id {}>'.format(self.id)
+
+class Dropbox(db.Model):
+    __tablename__ = 'dropbox'
+
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String())
+
+    def __init__(self, filename):
+        self.filename = filename
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
