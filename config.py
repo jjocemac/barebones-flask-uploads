@@ -9,6 +9,7 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     S3_BUCKET = os.environ['S3_BUCKET']
+    DROPBOX_KEY = os.environ['DROPBOX_KEY']
 
 class ProductionConfig(Config):
     DEBUG = False
